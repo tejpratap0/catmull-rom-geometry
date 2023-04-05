@@ -1,0 +1,11 @@
+body {
+	margin: 0;
+	background-color: #000;
+	font-family: arial;
+	overflow: hidden;
+}
+
+canvas {
+	display: block;
+	overflow: hidden;
+}
