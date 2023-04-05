@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/libs/utils/OrbitControls.js'; 
+import { GUI } from 'three/libs/utils/lil-gui.module.min.js';
 
 let camera, scene, renderer, cameraControls; 
+let mesh, curve; 
 
 function init() { 
     try{
@@ -35,6 +37,14 @@ function init() {
         
         cameraControls = new OrbitControls( camera, renderer.domElement );
      
+        const params = {
+            Width: "0.2"
+        } 
+        const gui = new GUI( { width: 285 } );
+        gui.add(params, "Width").onFinishChange(function (value) {
+            addGeometry(value);
+        });
+
     }catch(error){ 
         console.error("[Loading Error] Error in creating three js scene.");
     }
@@ -78,38 +88,54 @@ async function readInput(){
         return points;
     } 
 }
-
-async function createSpline(){
-    let points = await readInput(); 
-    
-    if(points){
-        // Creating gizmo points
-        const gizmoGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        const gizmoMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-
-        for (let i = 0; i < points.length; i++) {
-            const gizmoMesh = new THREE.Mesh(gizmoGeometry, gizmoMaterial);
-            gizmoMesh.position.copy(points[i]);
-            scene.add(gizmoMesh);
-        }
-  
-        // Creating Catmull ROM
-        const curve = new THREE.CatmullRomCurve3(points); 
-        let curveLength = Math.ceil(curve.getLength()) * 3; 
-        const splineGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(curveLength)); 
-        const splineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff }); 
-        const splineObject = new THREE.Line(splineGeometry, splineMaterial); 
-        scene.add(splineObject);
  
-        // Creating Geometry  
-        const tubeGeometry = new THREE.TubeGeometry(curve, curveLength, 0.2, 2, false); 
-        const material = new THREE.MeshBasicMaterial({ color: 0x5b9bd5, wireframe: true });
-        const mesh = new THREE.Mesh(tubeGeometry, material); 
-        scene.add(mesh);
+function createCurve(points = []){   
+ 
+    // Creating gizmo points
+    const gizmoGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    const gizmoMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    for (let i = 0; i < points.length; i++) {
+        const gizmoMesh = new THREE.Mesh(gizmoGeometry, gizmoMaterial);
+        gizmoMesh.position.copy(points[i]);
+        scene.add(gizmoMesh);
     }
-    
+
+    // Creating Curve
+    curve = new THREE.CatmullRomCurve3(points); 
+    let curveLength = Math.ceil(curve.getLength()) * 3; 
+    const splineGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(curveLength)); 
+    const splineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff }); 
+    const splineObject = new THREE.Line(splineGeometry, splineMaterial); 
+    scene.add(splineObject); 
+
+}
+
+function addGeometry(width = 0.1){   
+  
+    if(mesh){
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        scene.remove( mesh );
+    }
+
+    let curveLength = Math.ceil(curve.getLength()) * 3; 
+    // Creating Geometry  
+    const geometry = new THREE.TubeGeometry(curve, curveLength, width, 2, false); 
+    const material = new THREE.MeshBasicMaterial({ color: 0x5b9bd5, wireframe: true });
+    mesh = new THREE.Mesh(geometry, material); 
+    scene.add(mesh);    
+}
+ 
+async function initGeometry(){  
+    let points = await readInput(); 
+    if(points){ 
+        createCurve(points);
+        addGeometry(0.2);
+    }
 }
 
 init();
-
-createSpline();
+initGeometry(); 
+ 
+window.addGeometry = addGeometry.bind(this);
